@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <!-- Basic metadata for the browser -->
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BrandCraft MuseAI | Dashboard</title>
+
+    <!-- 1. External Scripts and Fonts -->
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600&display=swap" rel="stylesheet">
+    
+    <style>
+        /* 2. Custom CSS Styles */
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #4e759c; scroll-behavior: smooth; }
+        /* Glass Card Effect */
+        .glass-card { background: white; border-radius: 2rem; border: 1px solid #f1f5f9; box-shadow: 0 4px 20px -5px rgba(0,0,0,0.05); }
+        /* Utility to hide elements */
+        .hidden { display: none; }
+        /* Styling for the active button in the sidebar */
+        .nav-btn-active { background-color: #f1f5f9; color: #0f172a; font-weight: 600; }
+        
+        /* Styling the text output from the AI */
+        .brand-output {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            color: #0F172A;
+            font-size: 1.1rem;
+            line-height: 1.8;
+            font-style: normal !important;
+            white-space: pre-line;
+        }
+
+        .brand-output strong {
+            color: #6366F1;
+            font-weight: 600;
+        }    
+        /* Chat System Styles */
+        .chat-container {
+            display: flex;
+            flex-direction: column;
+            height: 70vh;
+            overflow-y: auto;
+            padding: 2rem;
+            gap: 1.5rem;
+        }
+
+        .message-bubble {
+            max-width: 80%;
+            padding: 1rem 1.5rem;
+            border-radius: 1.5rem;
+            font-size: 1rem;
+            line-height: 1.5;
+        }
+         
+        /* AI messages on left, User on right */
+        .ai-message { background: #F1F5F9; color: #0F172A; align-self: flex-start; border-bottom-left-radius: 0.25rem; }
+        .user-message { background: #0F172A; color: white; align-self: flex-end; border-bottom-right-radius: 0.25rem; }
+
+        .chat-input-area {
+            border-top: 1px solid #f1f5f9;
+            padding: 1.5rem;
+            display: flex;
+            gap: 1rem;
+        }
+
+        /* Animation */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .animate-in {
+            animation: fadeIn 0.4s ease-out forwards;
+        }
+
+        #quizModal, #resultModal {
+            z-index: 9999;
+        }
+
+        #optionsGrid {
+            display: grid;
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+    </style>
+</head>
+<body class="text-slate-900">
+    <!-- 3. Navigation Bar -->
+    <nav class="fixed w-full z-50 bg-white/80 backdrop-blur-md border-b border-slate-100 px-12 h-16 flex justify-between items-center">
+        <div class="flex items-center gap-2">
+            <div class="w-8 h-8 bg-slate-900 rounded-lg flex items-center justify-center text-white font-bold text-xs">BC</div>
+            <span class="font-bold tracking-tight text-lg">BrandCraft <span class="font-light text-lg">MuseAI</span></span>
+        </div>
+        <div class="flex gap-8 text-sm font-medium text-black">
+            <a href="#">Help</a>
+        </div>
+    </nav>
+
+    <!-- Welcome Screen -->
+    <div id="welcomeScreen" class="min-h-screen flex items-center justify-center pt-16">
+        <div class="max-w-3xl text-center space-y-8 px-6">
+            <h1 class="text-6xl font-semibold tracking-tighter">Welcome BrandCraft</h1>
+            <p class="text-xl text-white font-light">Your AI-powered creative studio. From conceptualizing your brand's soul to generating logos and protected digital assets.</p>
+            <div class="flex gap-4 justify-center">
+                <button onclick="startQuiz()" class="bg-white border border-slate-900 text-black px-8 py-4 rounded-full font-medium hover:bg-black hover:text-white transition-all duration-300">
+                    Take Personality Quiz 
+                </button>
+                <button onclick="showDashboard()" class="bg-white border border-slate-900 text-black px-8 py-4 rounded-full font-medium hover:bg-black hover:text-white transition-all duration-300">
+                    Create Brand Directly 
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 5. Personality Quiz Modal -->
+    <div id="quizModal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm hidden flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-2xl rounded-[2.5rem] p-10 shadow-2xl relative overflow-hidden">
+            <div id="quizProgress" class="absolute top-0 left-0 h-1.5 bg-indigo-600 transition-all duration-500" style="width: 0%"></div>
+            <div class="space-y-6">
+                <div>
+                    <span id="qNumber" class="text-indigo-600 font-bold text-xs uppercase tracking-widest">Question 1 of 6</span>
+                    <h2 id="qText" class="text-3xl font-semibold mt-2 leading-tight">What is your brand's primary goal?</h2>
+                </div>
+                <div id="optionsGrid"></div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 6. Quiz Results Modal -->
+    <div id="resultModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-md hidden flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-lg rounded-[3rem] p-12 text-center space-y-6 shadow-2xl">
+            <div class="w-20 h-20 bg-indigo-50 text-indigo-600 rounded-full flex items-center justify-center text-3xl mx-auto">✨</div>
+            <h3 class="text-indigo-500 font-bold uppercase tracking-widest text-sm">Your Brand Identity is</h3>
+            <h1 id="personalityTitle" class="text-5xl font-bold text-slate-900 tracking-tighter">The Minimalist</h1>
+            <p id="personalityDesc" class="text-slate-500 leading-relaxed text-lg">You believe less is more. Clarity, precision, and essentialism are your guiding stars.</p>
+            <button onclick="closeResultAndStart()" class="w-full bg-slate-900 text-white py-5 rounded-2xl font-bold text-lg hover:bg-slate-800 transition-all">Enter Studio</button>
+        </div>
+    </div>
+
+    <!-- Dashboard -->
+    <div id="dashboard" class="hidden pt-24 pb-12 px-12 max-w-[1500px] mx-auto grid grid-cols-12 gap-8">
+        <aside class="col-span-3 space-y-6">
+            <div class="space-y-1">
+                <p class="px-4 text-base font-semibold text-black uppercase tracking-wider mb-2">Creative Suite</p>
+                <button id="nav-naming" onclick="toggleSection('naming')" class="w-full text-left p-4 rounded-2xl text-black hover:bg-slate-50 flex items-center gap-3 text-sm transition-all hover:text-indigo-600">
+                    <span>💡</span> Brand Name Generation
+                </button>
+                <button id="nav-copy" onclick="toggleSection('copy')" class="w-full text-left p-4 rounded-2xl text-black hover:bg-slate-50 flex items-center gap-3 text-sm transition-all hover:text-indigo-600">
+                    <span>✍️</span> Content Generator 
+                </button>
+                <button id="nav-visual" onclick="toggleSection('visual')" class="w-full text-left p-4 rounded-2xl text-black hover:bg-slate-50 flex items-center gap-3 text-sm transition-all hover:text-indigo-600">
+                    <span>🎨</span> Logo Generation & Protection
+                </button>
+                <button id="nav-chat" onclick="toggleSection('chat')" class="w-full text-left p-4 rounded-2xl text-black hover:bg-slate-50 flex items-center gap-3 text-sm transition-all hover:text-indigo-600">
+                    <span>💬</span> AI ChatBox
+                </button>
+                <button id="nav-local" onclick="toggleSection('local')" class="w-full text-left p-4 rounded-2xl text-black hover:bg-slate-50 flex items-center gap-3 text-sm transition-all hover:text-indigo-600">
+                    <span>🌍</span> Multilingual Localizer
+                </button>
+            </div>
+        </aside>
+
+        <main class="col-span-9 space-y-8">
+            <!-- Section: Brand Naming -->
+            <div id="namingSection" class="glass-card p-10">
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="text-2xl font-semibold">Brand Naming</h3>
+                    <span class="bg-slate-100 px-3 py-1 rounded-full text-[10px] font-bold">MODE: CREATIVE</span>
+                </div>
+                <textarea id="namingDesc" class="w-full h-40 bg-slate-50 rounded-3xl p-8 border-none focus:ring-0 text-slate-500 text-lg outline-none" placeholder="Describe your brand vision..."></textarea>
+                <button onclick="genText('name')" class="w-full mt-6 bg-[#0F172A] text-white py-5 rounded-2xl font-bold hover:bg-slate-800">Generate Brand Names</button>
+                <div id="namingResult" class="mt-6 p-6 bg-white border border-slate-100 rounded-2xl brand-output">Results will appear here...</div>
+            </div>
+            
+            <!-- Section: Content Generator -->
+            <div id="copySection" class="glass-card p-8 hidden animate-in">
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="text-2xl font-semibold">Content Generator</h3>
+                    <span class="bg-blue-50 text-blue-600 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider">Premium Copy</span>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                    <div>
+                        <label class="text-[10px] font-bold text-slate-400 uppercase block mb-2">Platform</label>
+                        <select id="copyPlatform" class="w-full p-4 bg-slate-50 rounded-xl border-none outline-none text-slate-700 text-sm">
+                            <option value="Instagram Caption">Instagram</option>
+                            <option value="LinkedIn Post">LinkedIn</option>
+                            <option value="Twitter/X Thread">Twitter / X</option>
+                            <option value="Product Description">Website (Description)</option>
+                            <option value="Email Newsletter">Email Marketing</option>
+                            <option value="TikTok Script">TikTok Script</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-bold text-slate-400 uppercase block mb-2">Tone of Voice</label>
+                        <select id="copyTone" class="w-full p-4 bg-slate-50 rounded-xl border-none outline-none text-slate-700 text-sm">
+                            <option value="Professional & Authoritative">Professional</option>
+                            <option value="Friendly & Approachable">Friendly</option>
+                            <option value="Luxury & Exclusive">Luxury</option>
+                            <option value="Witty & Bold">Witty</option>
+                            <option value="Minimalist & Direct">Minimalist</option>
+                            <option value="Passionate & Inspiring">Inspirational</option>
+                        </select>
+                    </div>
+                </div>
+                <label class="text-[10px] font-bold text-slate-400 uppercase block mb-2">What are you talking about?</label>
+                <textarea id="copyDesc" class="w-full h-32 bg-slate-50 rounded-2xl p-6 border-none outline-none text-slate-700" placeholder="Describe the product, service, or topic..."></textarea>
+                <button onclick="genContent()" class="w-full mt-4 bg-slate-900 text-white py-4 rounded-xl font-bold hover:bg-black transition-all">Generate Social Copy</button>
+                <div id="copyResult" class="mt-6 p-6 bg-slate-900 text-slate-300 rounded-2xl brand-output min-h-[100px] border border-slate-800">Results will appear here...</div>
+            </div>
+             
+            <!-- Section: Visual Identity -->
+            <div id="visualSection" class="glass-card p-10 hidden">
+                <h3 class="text-2xl font-semibold mb-6">Logo Generation & Protection</h3>
+                <input id="logoName" type="text" placeholder="Enter Brand Name for Logo" class="w-full p-6 bg-slate-50 rounded-2xl mb-4 outline-none border-none">
+                <button onclick="genLogo()" class="w-full bg-[#0F172A] text-white py-5 rounded-2xl font-bold">Create Protected Logo</button>
+                <div class="mt-8 border-2 border-dashed border-slate-100 rounded-3xl p-10 flex flex-col items-center min-h-[300px] justify-center">
+                    <img id="logoImg" class="hidden max-w-xs rounded-2xl shadow-xl mb-4">
+                    <p id="logoMsg" class="text-slate-400 text-sm">Logo will render here.</p>
+                </div>
+            </div>
+
+            <!-- Section: AI Chat -->
+            <div id="chatSection" class="glass-card overflow-hidden hidden flex flex-col bg-white">
+                <div class="p-6 border-b border-slate-100 flex justify-between items-center">
+                    <h3 class="text-xl font-bold">MuseAI Expert</h3>
+                    <span class="text-green-500 text-xs font-bold uppercase tracking-widest">● Online</span>
+                </div>
+                <div id="fullChatDisplay" class="chat-container">
+                    <div class="message-bubble ai-message">Hello, I'm MuseAI 👋 I can help you create branding, content, and ideas for your business.</div>
+                </div>
+                <div class="chat-input-area bg-slate-50">
+                    <input id="fullChatInput" type="text" placeholder="Ask MuseAI to generate branding..." class="flex-1 p-4 rounded-2xl border-none outline-none focus:ring-0">
+                    <button onclick="sendChatMessage()" class="bg-slate-900 text-white px-8 rounded-2xl font-bold">Send</button>
+                </div>
+            </div>
+            
+            <!-- Section: Localizer -->
+            <div id="localSection" class="glass-card p-10 hidden animate-in">
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="text-2xl font-semibold">Multilingual Localizer</h3>
+                    <span class="bg-purple-50 text-purple-600 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider">Language Settings</span>
+                </div>
+                <div class="grid grid-cols-1 gap-4 mb-6">
+                    <label class="text-[10px] font-bold text-slate-400 uppercase block mb-2">Target Language</label>
+                    <select id="languageSelect" class="w-full p-4 bg-slate-50 rounded-xl border-none outline-none text-slate-700 text-sm">
+                        <option value="German">German</option>
+                        <option value="Spanish">Spanish</option>
+                        <option value="French">French</option>
+                        <option value="Japanese">Japanese</option>
+                        <option value="Hindi">Hindi</option>
+                        <option value="Arabic">Arabic</option>
+                    </select>
+                </div>
+                <label class="text-[10px] font-bold text-slate-400 uppercase block mb-2">Text to Translate</label>
+                <textarea id="localInput" class="w-full h-32 bg-slate-50 rounded-2xl p-6 border-none outline-none text-slate-700 mb-4" placeholder="Enter brand message..."></textarea>
+                <button onclick="runLocalization()" class="w-full bg-slate-900 text-white py-4 rounded-xl font-bold hover:bg-black transition-all">Translate Content</button>
+                <div id="localResult" class="mt-6 p-6 bg-white border border-slate-100 rounded-2xl brand-output min-h-[100px]">Translation will appear here...</div>
+            </div>
+        </main>
+    </div>
+     
+    <!-- 8. JavaScript -->
+    <script>
+        const API = "http://127.0.0.1:8001";
+
+        function showDashboard() {
+            document.getElementById('welcomeScreen').classList.add('hidden');
+            document.getElementById('dashboard').classList.remove('hidden');
+        }
+ 
+        function toggleSection(section) {
+            const sections = ['namingSection', 'copySection', 'visualSection', 'chatSection', 'localSection'];
+            sections.forEach(id => document.getElementById(id)?.classList.add('hidden'));
+            
+            const target = document.getElementById(`${section}Section`);
+            if(target) target.classList.remove('hidden');
+
+            const navBtns = ['nav-naming', 'nav-copy', 'nav-visual', 'nav-chat', 'nav-local'];
+            navBtns.forEach(id => {
+                const btn = document.getElementById(id);
+                if (btn) {
+                    if (id === `nav-${section}`) {
+                        btn.classList.add('nav-btn-active', 'text-indigo-600', 'bg-slate-50');
+                    } else {
+                        btn.classList.remove('nav-btn-active', 'text-indigo-600', 'bg-slate-50');
+                    }
+                }
+            });
+        }
+         
+        const chatBox = document.getElementById('fullChatDisplay');
+        const userInput = document.getElementById('fullChatInput');
+        let brandPersonality = "Modern & Professional";
+
+        function addMessage(text, sender) {
+            const div = document.createElement("div");
+            const bubbleClass = sender === 'user' ? 'user-message' : 'ai-message';
+            div.className = `message-bubble ${bubbleClass} animate-in`;
+            div.innerHTML = text;
+            chatBox.appendChild(div);
+            chatBox.scrollTo({ top: chatBox.scrollHeight, behavior: 'smooth' });
+        }
+
+        async function sendChatMessage() {
+            const text = userInput.value.trim();
+            if (!text) return;
+            addMessage(text, "user");
+            userInput.value = "";
+            
+            const typingId = "typing-" + Date.now();
+            const typingDiv = document.createElement("div");
+            typingDiv.id = typingId;
+            typingDiv.className = "message-bubble ai-message italic opacity-50";
+            typingDiv.innerText = "MuseAI is thinking...";
+            chatBox.appendChild(typingDiv);
+
+            try {
+                const response = await fetch(`${API}/branding-chat?message=${encodeURIComponent(`Brand: ${brandPersonality}. ${text}`)}`);
+                const data = await response.json();
+                document.getElementById(typingId).remove();
+                addMessage(data.response, "ai");
+            } catch (e) {
+                document.getElementById(typingId).innerText = "Error connecting to AI.";
+            }
+        }
+
+        async function genText(type) {
+            const inputId = (type === 'name') ? 'namingDesc' : 'copyDesc';
+            const resultId = (type === 'name') ? 'namingResult' : 'copyResult';
+            const desc = document.getElementById(inputId).value;
+            const out = document.getElementById(resultId);
+            if(!desc) return;
+            out.innerText = "MuseAI is thinking...";
+            try {
+                const res = await fetch(`${API}/generate-brand?description=${encodeURIComponent(desc)}&type=${type}`);
+                const data = await res.json();
+                out.innerText = data.result;
+            } catch(e) { out.innerText = "Error generating content."; }
+        }
+
+        async function genLogo() {
+            const name = document.getElementById('logoName').value;
+            const img = document.getElementById('logoImg');
+            const msg = document.getElementById('logoMsg');
+            if(!name) return;
+            img.classList.add('hidden');
+            msg.innerText = "Generating logo...";
+            img.src = `${API}/generate-logo?brand_name=${encodeURIComponent(name)}`;
+            img.onload = () => { img.classList.remove('hidden'); msg.classList.add('hidden'); };
+        }
+
+        const questions = [
+            { q: "What is your brand's primary goal?", options: [{text: "Exclusivity and status", val: "Luxury"}, {text: "Innovation", val: "Tech-Forward"}, {text: "Sustainability", val: "Eco-Friendly"}, {text: "Simplicity", val: "Minimalist"}] },
+            { q: "Pick a visual aesthetic:", options: [{text: "Bold colors", val: "Playful"}, {text: "Clean lines", val: "Minimalist"}, {text: "Gold accents", val: "Luxury"}] }
+        ];
+
+        let currentStep = 0;
+        let scores = {};
+
+        function startQuiz() {
+            document.getElementById('quizModal').classList.remove('hidden');
+            currentStep = 0; scores = {};
+            showQuestion();
+        }
+
+        function showQuestion() {
+            const q = questions[currentStep];
+            if(!q) return;
+            document.getElementById('qNumber').innerText = `Question ${currentStep + 1} of ${questions.length}`;
+            document.getElementById('qText').innerText = q.q;
+            document.getElementById('quizProgress').style.width = `${((currentStep + 1) / questions.length) * 100}%`;
+            
+            const grid = document.getElementById('optionsGrid');
+            grid.innerHTML = '';
+            q.options.forEach(opt => {
+                const btn = document.createElement('button');
+                btn.className = "w-full text-left p-6 rounded-2xl border border-slate-200 hover:border-indigo-600 hover:bg-indigo-50 transition-all font-medium text-slate-700 animate-in";
+                btn.innerText = opt.text;
+                btn.onclick = () => {
+                    scores[opt.val] = (scores[opt.val] || 0) + 1;
+                    if (currentStep < questions.length - 1) {
+                        currentStep++; showQuestion();
+                    } else { finishQuiz(); }
+                };
+                grid.appendChild(btn);
+            });
+        }
+
+        function finishQuiz() {
+            const top = Object.keys(scores).reduce((a, b) => scores[a] > scores[b] ? a : b);
+            document.getElementById('quizModal').classList.add('hidden');
+            document.getElementById('personalityTitle').innerText = top;
+            document.getElementById('resultModal').classList.remove('hidden');
+            brandPersonality = top;
+        }
+
+        function closeResultAndStart() {
+            document.getElementById('resultModal').classList.add('hidden');
+            showDashboard();
+        }
+
+        async function runLocalization() {
+            const text = document.getElementById('localInput').value;
+            const language = document.getElementById('languageSelect').value;
+            const out = document.getElementById('localResult');
+            if (!text) return;
+            out.innerText = `Translating into ${language}...`;
+            try {
+                const res = await fetch(`${API}/localize?text=${encodeURIComponent(text)}&language=${encodeURIComponent(language)}`);
+                const data = await res.json();
+                out.innerHTML = `<div class="whitespace-pre-line">${data.result}</div>`;
+            } catch (e) { out.innerText = "Error connecting to service."; }
+        }
+
+        async function genContent() {
+            const platform = document.getElementById('copyPlatform').value;
+            const tone = document.getElementById('copyTone').value;
+            const desc = document.getElementById('copyDesc').value;
+            const out = document.getElementById('copyResult');
+            if (!desc) return;
+            out.innerText = "MuseAI is crafting your copy...";
+            try {
+                const res = await fetch(`${API}/generate-brand?description=${encodeURIComponent(desc)}&personality=${encodeURIComponent(tone)}&type=copy&platform=${encodeURIComponent(platform)}`);
+                const data = await res.json();
+                out.innerText = data.result;
+            } catch (e) { out.innerText = "Error generating content."; }
+        }
+    </script>
+</body>
+</html>
